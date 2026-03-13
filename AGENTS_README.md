@@ -934,7 +934,7 @@ The editor's CSS is scoped under `.ep-root`. This class is applied automatically
 
 - [npm package](https://www.npmjs.com/package/@eigenpal/docx-js-editor)
 - [GitHub repository](https://github.com/eigenpal/docx-editor)
-- [Live demo](https://docx-js-editor.vercel.app/)
+- [Live demo](https://docx-editor.dev/editor)
 - [Props & Ref Methods](docs/PROPS.md)
 - [Plugin System](docs/PLUGINS.md)
 - [Architecture](docs/ARCHITECTURE.md)
