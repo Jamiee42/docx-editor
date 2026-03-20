@@ -106,6 +106,9 @@ import { LayoutSelectionGate } from './LayoutSelectionGate';
 import { useVisualLineNavigation } from './useVisualLineNavigation';
 import { useDragAutoScroll } from './useDragAutoScroll';
 
+// Sidebar constants
+import { SIDEBAR_DOCUMENT_SHIFT } from '../components/CommentsSidebar';
+
 // Types
 import type {
   Document,
@@ -3963,9 +3966,15 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
           style={{
             ...viewportStyles,
             minHeight: totalHeight,
+            // Negative margin at zoom<1 shrinks scroll area to match visual height;
+            // positive margin at zoom>1 grows it so content isn't clipped.
+            marginBottom: zoom !== 1 ? totalHeight * (zoom - 1) : undefined,
             transform: (() => {
               const parts: string[] = [];
-              if (commentsSidebarOpen) parts.push('translateX(-120px)');
+              if (commentsSidebarOpen) {
+                // Center page + sidebar as a unit within the container
+                parts.push(`translateX(-${SIDEBAR_DOCUMENT_SHIFT}px)`);
+              }
               if (zoom !== 1) parts.push(`scale(${zoom})`);
               return parts.length > 0 ? parts.join(' ') : undefined;
             })(),
@@ -4058,8 +4067,22 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
           )}
         </div>
 
-        {/* Sidebar overlay — inside scroll container, scrolls with document */}
-        {sidebarOverlay}
+        {/* Sidebar overlay — height-constrained to match visual document height */}
+        {sidebarOverlay && (
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              height: totalHeight * zoom,
+              pointerEvents: 'none',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{ pointerEvents: 'auto' }}>{sidebarOverlay}</div>
+          </div>
+        )}
       </div>
     );
   }
