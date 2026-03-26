@@ -196,6 +196,8 @@ export interface PagedEditorProps {
   onContextMenu?: (data: { x: number; y: number; hasSelection: boolean }) => void;
   /** Callback with pre-computed Y positions for comment/tracked-change anchors (for sidebar positioning without DOM queries). */
   onAnchorPositionsChange?: (positions: Map<string, number>) => void;
+  /** Set of resolved comment IDs — hides highlight for these comments */
+  resolvedCommentIds?: Set<number>;
 }
 
 export interface PagedEditorRef {
@@ -1564,6 +1566,7 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
       onHyperlinkClick,
       onContextMenu,
       onAnchorPositionsChange,
+      resolvedCommentIds,
     } = props;
 
     // Resolve the scroll container: prefer parent-provided ref, fallback to own container
@@ -1943,6 +1946,7 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
               pageBorders: sectionProperties?.pageBorders,
               theme: _theme,
               footnotesByPage: footnotesByPage?.size ? footnotesByPage : undefined,
+              resolvedCommentIds,
             } as RenderPageOptions & {
               pageGap?: number;
               blockLookup?: BlockLookup;
@@ -2003,6 +2007,7 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
         sectionProperties,
         onRenderedDomContextReady,
         document,
+        resolvedCommentIds,
       ]
     );
 
@@ -3507,7 +3512,8 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
         if (readOnly) return;
         // Don't steal focus from sidebar inputs (textareas, inputs, buttons)
         const target = e.target as HTMLElement;
-        if (target.closest('.docx-comments-sidebar')) return;
+        if (target.closest('.docx-comments-sidebar') || target.closest('.docx-unified-sidebar'))
+          return;
         hiddenPMRef.current?.focus();
         setIsFocused(true);
       },
@@ -3731,7 +3737,11 @@ const PagedEditorComponent = forwardRef<PagedEditorRef, PagedEditorProps>(
       (e: React.MouseEvent) => {
         if (readOnly) return;
         // Don't steal focus from sidebar inputs
-        if ((e.target as HTMLElement).closest('.docx-comments-sidebar')) return;
+        if (
+          (e.target as HTMLElement).closest('.docx-comments-sidebar') ||
+          (e.target as HTMLElement).closest('.docx-unified-sidebar')
+        )
+          return;
         // Focus hidden PM if clicking outside pages area
         if (!hiddenPMRef.current?.isFocused()) {
           hiddenPMRef.current?.focus();
