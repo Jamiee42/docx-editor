@@ -330,7 +330,7 @@ export interface PagedEditorRef {
 // =============================================================================
 
 // Default page size (US Letter at 96 DPI)
-const DEFAULT_PAGE_WIDTH = 816;
+export const DEFAULT_PAGE_WIDTH = 816;
 const DEFAULT_PAGE_HEIGHT = 1056;
 
 // Default margins (1 inch at 96 DPI)
