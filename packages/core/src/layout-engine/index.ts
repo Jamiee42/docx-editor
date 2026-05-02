@@ -2,6 +2,10 @@
  * Layout Engine - Main Entry Point
  *
  * Converts blocks + measures into positioned fragments on pages.
+ *
+ * @experimental Stable enough for the first-party React adapter, but the
+ * API may change in minor releases until a third-party adapter validates
+ * it. Pin a version range if you depend on this directly.
  */
 
 import type {

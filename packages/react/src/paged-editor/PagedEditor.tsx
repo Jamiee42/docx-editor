@@ -57,11 +57,8 @@ import type {
   ParagraphSpacing,
   TextBoxBlock,
   SectionBreakBlock,
-} from '@eigenpal/docx-core/layout-engine/types';
-import {
-  DEFAULT_TEXTBOX_MARGINS,
-  DEFAULT_TEXTBOX_WIDTH,
-} from '@eigenpal/docx-core/layout-engine/types';
+} from '@eigenpal/docx-core/layout-engine';
+import { DEFAULT_TEXTBOX_MARGINS, DEFAULT_TEXTBOX_WIDTH } from '@eigenpal/docx-core/layout-engine';
 
 // Table commands (for quick-action insert buttons)
 import {
@@ -71,10 +68,7 @@ import {
 } from '@eigenpal/docx-core/prosemirror';
 
 // Layout bridge
-import {
-  toFlowBlocks,
-  convertBorderSpecToLayout,
-} from '@eigenpal/docx-core/layout-bridge/toFlowBlocks';
+import { toFlowBlocks, convertBorderSpecToLayout } from '@eigenpal/docx-core/layout-bridge';
 import {
   measureParagraph,
   resetCanvasContext,
@@ -82,21 +76,17 @@ import {
   getCachedParagraphMeasure,
   setCachedParagraphMeasure,
   type FloatingImageZone,
-} from '@eigenpal/docx-core/layout-bridge/measuring';
-import {
-  hitTestFragment,
-  hitTestTableCell,
-  getPageTop,
-} from '@eigenpal/docx-core/layout-bridge/hitTest';
-import { clickToPosition } from '@eigenpal/docx-core/layout-bridge/clickToPosition';
-import { clickToPositionDom } from '@eigenpal/docx-core/layout-bridge/clickToPositionDom';
+} from '@eigenpal/docx-core/layout-bridge';
+import { hitTestFragment, hitTestTableCell, getPageTop } from '@eigenpal/docx-core/layout-bridge';
+import { clickToPosition } from '@eigenpal/docx-core/layout-bridge';
+import { clickToPositionDom } from '@eigenpal/docx-core/layout-bridge';
 import {
   selectionToRects,
   getCaretPosition,
   type SelectionRect,
   type CaretPosition,
-} from '@eigenpal/docx-core/layout-bridge/selectionRects';
-import { findWordBoundaries } from '@eigenpal/docx-core/utils/textSelection';
+} from '@eigenpal/docx-core/layout-bridge';
+import { findWordBoundaries } from '@eigenpal/docx-core/utils';
 
 // Layout painter
 import { LayoutPainter, type BlockLookup } from '@eigenpal/docx-core/layout-painter';
@@ -106,7 +96,7 @@ import {
   type RenderPagesUpdateKind,
   type HeaderFooterContent,
   type FootnoteRenderItem,
-} from '@eigenpal/docx-core/layout-painter/renderPage';
+} from '@eigenpal/docx-core/layout-painter';
 
 // Selection sync
 import { LayoutSelectionGate } from './LayoutSelectionGate';
@@ -127,13 +117,13 @@ import type {
   HeaderFooter,
 } from '@eigenpal/docx-core/types/document';
 import type { Footnote } from '@eigenpal/docx-core/types/content';
-import { getFootnoteText } from '@eigenpal/docx-core/docx/footnoteParser';
+import { getFootnoteText } from '@eigenpal/docx-core/docx';
 import {
   collectFootnoteRefs,
   mapFootnotesToPages,
   buildFootnoteContentMap,
   calculateFootnoteReservedHeights,
-} from '@eigenpal/docx-core/layout-bridge/footnoteLayout';
+} from '@eigenpal/docx-core/layout-bridge';
 import type { RenderedDomContext } from '../plugin-api/types';
 import { createRenderedDomContext } from '../plugin-api/RenderedDomContext';
 import { findVerticalScrollParentOrRoot } from './findVerticalScrollParent';
@@ -242,7 +232,7 @@ export interface PagedEditorProps {
   /** External ProseMirror plugins. */
   externalPlugins?: Plugin[];
   /** Extension manager for plugins/schema/commands (optional — falls back to default) */
-  extensionManager?: import('@eigenpal/docx-core/prosemirror/extensions/ExtensionManager').ExtensionManager;
+  extensionManager?: import('@eigenpal/docx-core/prosemirror/extensions').ExtensionManager;
   /** Callback when editor is ready. */
   onReady?: (ref: PagedEditorRef) => void;
   /** Callback when rendered DOM context is ready. */

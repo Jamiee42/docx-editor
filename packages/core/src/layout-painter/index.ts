@@ -3,6 +3,10 @@
  *
  * Main entry point for rendering Layout data to DOM.
  * Provides reconciliation for efficient incremental updates.
+ *
+ * @experimental Stable enough for the first-party React adapter, but the
+ * API may change in minor releases until a third-party adapter validates
+ * it. Pin a version range if you depend on this directly.
  */
 
 import type {
@@ -54,6 +58,7 @@ export {
   type RenderContext,
 };
 export type { RenderPagesUpdateKind };
+export type { HeaderFooterContent, RenderPageOptions, FootnoteRenderItem } from './renderPage';
 
 /**
  * Block lookup entry for painter
