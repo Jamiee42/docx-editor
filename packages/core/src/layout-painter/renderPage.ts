@@ -686,8 +686,9 @@ function renderHeaderFooterContent(
   for (let i = 0; i < content.blocks.length; i++) {
     const block = content.blocks[i];
     const measure = content.measures[i];
+    if (!block || !measure) continue;
 
-    if (block?.kind === 'paragraph' && measure?.kind === 'paragraph') {
+    if (block.kind === 'paragraph' && measure.kind === 'paragraph') {
       const paragraphBlock = block as ParagraphBlock;
       const paragraphMeasure = measure as ParagraphMeasure;
 
@@ -760,12 +761,40 @@ function renderHeaderFooterContent(
         { document: doc }
       );
 
-      // Position the fragment
-      fragEl.style.position = 'relative';
-      fragEl.style.marginBottom = '0';
+      // Position absolutely within the HF container using cursorY. This
+      // matches how the body positions fragments so the rendered placement
+      // tracks `paragraphMeasure.totalHeight` (which includes spaceBefore/
+      // spaceAfter from spacing). See #379 for the proper render-context fix.
+      fragEl.style.position = 'absolute';
+      fragEl.style.top = `${cursorY}px`;
+      fragEl.style.left = '0';
+      fragEl.style.width = `${contentWidth}px`;
 
       containerEl.appendChild(fragEl);
       cursorY += paragraphMeasure.totalHeight;
+    } else if (block.kind === 'table' && measure.kind === 'table') {
+      // HF tables don't paginate, so the synthetic fragment covers all rows.
+      const syntheticFragment: TableFragment = {
+        kind: 'table',
+        blockId: block.id,
+        x: 0,
+        y: cursorY,
+        width: measure.totalWidth,
+        height: measure.totalHeight,
+        fromRow: 0,
+        toRow: measure.rows.length,
+        pmStart: block.pmStart,
+        pmEnd: block.pmEnd,
+      };
+      const fragEl = renderTableFragment(syntheticFragment, block, measure, context, {
+        document: doc,
+      });
+      // renderTableFragment positions itself absolutely inside the page area;
+      // we override to position absolutely inside the HF container at cursorY.
+      fragEl.style.top = `${cursorY}px`;
+      fragEl.style.left = '0';
+      containerEl.appendChild(fragEl);
+      cursorY += measure.totalHeight;
     }
   }
 
