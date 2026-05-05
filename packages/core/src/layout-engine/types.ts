@@ -226,6 +226,8 @@ export type ListNumPr = {
 export type ParagraphAttrs = {
   alignment?: 'left' | 'center' | 'right' | 'justify';
   spacing?: ParagraphSpacing;
+  /** See ParagraphFormatting.spacingExplicit. */
+  spacingExplicit?: { before?: boolean; after?: boolean };
   indent?: ParagraphIndent;
   keepNext?: boolean;
   keepLines?: boolean;

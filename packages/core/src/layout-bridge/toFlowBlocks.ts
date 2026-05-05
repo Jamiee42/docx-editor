@@ -609,6 +609,9 @@ function convertParagraphAttrs(
       }
     }
   }
+  if (pmAttrs.spacingExplicit) {
+    attrs.spacingExplicit = pmAttrs.spacingExplicit;
+  }
 
   // Indentation - handle list item fallback calculation
   // For list items without explicit indentation, calculate based on level

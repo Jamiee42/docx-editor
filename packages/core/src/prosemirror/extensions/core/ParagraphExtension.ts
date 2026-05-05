@@ -255,6 +255,7 @@ const paragraphNodeSpec: NodeSpec = {
     spaceAfter: { default: null },
     lineSpacing: { default: null },
     lineSpacingRule: { default: null },
+    spacingExplicit: { default: null },
     indentLeft: { default: null },
     indentRight: { default: null },
     indentFirstLine: { default: null },

@@ -33,6 +33,9 @@ import { DEFAULT_SINGLE_LINE_RATIO } from '../../utils/fontResolver';
 // Default values - match OOXML spec defaults
 const DEFAULT_FONT_SIZE = 11; // 11pt (Word 2007+ default)
 const DEFAULT_FONT_FAMILY = 'Calibri';
+
+/** Word's "single line spacing" floor applied to `auto`/`atLeast` line rules. */
+const WORD_SINGLE_LINE_FLOOR = 1.15;
 const DEFAULT_LINE_HEIGHT_MULTIPLIER = 1.0; // OOXML spec default: single spacing (line=240)
 
 // Floating-point tolerance for line breaking (0.5px)
@@ -218,7 +221,20 @@ function calculateEmptyParagraphMetrics(
   fontFamily?: string
 ): LineTypography {
   const metrics = getFontMetrics({ fontSize, fontFamily: fontFamily ?? DEFAULT_FONT_FAMILY });
-  return calculateTypographyMetrics(fontSize, spacing, metrics);
+  const result = calculateTypographyMetrics(fontSize, spacing, metrics);
+
+  // Empty paragraphs render at single-line height even when the doc writes a
+  // smaller line value; without this floor, narrow-metric fonts (OS/2 ratio
+  // < 1.15) collapse below Word's render.
+  const lineRule = spacing?.lineRule ?? 'auto';
+  if (lineRule === 'auto' || lineRule === 'atLeast') {
+    const fontSizePx = ptToPx(fontSize);
+    const floored = Math.max(result.lineHeight, fontSizePx * WORD_SINGLE_LINE_FLOOR);
+    if (floored !== result.lineHeight) {
+      return { ...result, lineHeight: floored };
+    }
+  }
+  return result;
 }
 
 /**

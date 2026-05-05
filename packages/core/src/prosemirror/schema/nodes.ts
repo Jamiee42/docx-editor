@@ -38,6 +38,8 @@ export interface ParagraphAttrs {
   spaceAfter?: number;
   lineSpacing?: number;
   lineSpacingRule?: LineSpacingRule;
+  /** See ParagraphFormatting.spacingExplicit. */
+  spacingExplicit?: import('../../types/formatting').SpacingExplicit;
 
   // Indentation (in twips)
   indentLeft?: number;
