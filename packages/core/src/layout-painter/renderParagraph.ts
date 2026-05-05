@@ -1183,7 +1183,20 @@ export function renderParagraphFragment(
         markerFontFamily,
         markerFontSize
       );
-      lineEl.insertBefore(marker, lineEl.firstChild);
+      // With no hanging indent slot reserved for the marker, Word's default
+      // tab suffix wraps the body text below the marker (§17.9.25). We mirror
+      // that by giving the marker its own line, sized to match line height.
+      const hanging = indent?.hanging ?? 0;
+      if (hanging > 0) {
+        lineEl.insertBefore(marker, lineEl.firstChild);
+      } else {
+        const markerLine = doc.createElement('div');
+        markerLine.className = 'layout-line layout-list-marker-line';
+        markerLine.style.height = `${line.lineHeight}px`;
+        markerLine.style.lineHeight = `${line.lineHeight}px`;
+        markerLine.appendChild(marker);
+        fragmentEl.appendChild(markerLine);
+      }
     }
 
     // Append line directly to fragment (per-line margins are applied in renderLine)
@@ -1209,7 +1222,6 @@ function renderListMarker(
 ): HTMLElement {
   const span = doc.createElement('span');
   span.className = 'layout-list-marker';
-  span.style.display = 'inline-block';
 
   // Apply font styling so the marker matches the paragraph text
   // Per ECMA-376 §17.9.6, marker formatting comes from level rPr,
@@ -1223,19 +1235,18 @@ function renderListMarker(
     span.style.fontSize = `${fontSizePx}px`;
   }
 
-  // In Word, the marker character is followed by a tab that extends to the
-  // text indent position. We emulate this by left-aligning the marker within
-  // the hanging indent box — the marker sits at the start and the remaining
-  // space acts as the tab gap, just like Word.
   span.textContent = marker;
-
-  // The marker box fills the hanging indent space
-  const hanging = indent?.hanging ?? 24; // Default 24px if not specified
-
-  // min-width so short markers fill the space; long markers can extend
-  span.style.minWidth = `${hanging}px`;
   span.style.textAlign = 'left';
   span.style.boxSizing = 'border-box';
+
+  // When a hanging indent reserves space for the marker, render inline-block
+  // so the marker sits in that slot. With no hanging indent the caller wraps
+  // the marker in its own line element instead.
+  const hanging = indent?.hanging ?? 0;
+  span.style.display = 'inline-block';
+  if (hanging > 0) {
+    span.style.minWidth = `${hanging}px`;
+  }
 
   return span;
 }

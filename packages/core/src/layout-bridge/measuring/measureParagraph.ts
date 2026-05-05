@@ -743,7 +743,17 @@ export function measureParagraph(
   finalizeLine();
 
   // Calculate total height
-  const totalHeight = lines.reduce((sum, line) => sum + line.lineHeight, 0);
+  let totalHeight = lines.reduce((sum, line) => sum + line.lineHeight, 0);
+
+  // The renderer wraps a list marker in its own line element when there is no
+  // hanging indent reserved for it (matching Word's <w:suff w:val="tab"/>
+  // wrap, see renderParagraph.ts). Account for that extra row here so the
+  // paragraph reports the correct height to its container.
+  const hasOwnLineMarker =
+    !!attrs?.listMarker && !attrs?.listMarkerHidden && (indent?.hanging ?? 0) === 0;
+  if (hasOwnLineMarker && lines.length > 0) {
+    totalHeight += lines[0].lineHeight;
+  }
 
   // Add spacing before/after
   let totalWithSpacing = totalHeight;
