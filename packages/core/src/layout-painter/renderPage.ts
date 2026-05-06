@@ -221,13 +221,9 @@ function applyPageStyles(
   element.style.backgroundColor = options.backgroundColor ?? '#ffffff';
   element.style.overflow = 'hidden';
 
-  // Set default font styles (matches Word default: 11pt Calibri).
-  // Individual runs will override these with their own font settings.
-  // Use the resolver so the inherited fallback chain matches the one used by
-  // canvas-based text measurement (measureContainer.ts → resolveFontFamily).
-  // Otherwise measurement and rendering can pick different fallbacks (e.g.
-  // Carlito vs Arial) and lines computed to fit will overflow visually
-  // because Arial advance widths are wider than Carlito's. (#334)
+  // Page-level default (11pt Calibri). Must use the same chain as canvas
+  // measurement in measureContainer.ts, otherwise unbreakable runs that lack
+  // an explicit fontFamily can overflow the page margin (#334).
   element.style.fontFamily = resolveFontFamily('Calibri').cssFallback;
   // Use pixels to match Canvas-based measurements (11pt = 11 * 96/72 ≈ 14.67px)
   element.style.fontSize = `${(11 * 96) / 72}px`;
