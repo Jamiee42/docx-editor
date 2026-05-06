@@ -221,13 +221,9 @@ function applyPageStyles(
   element.style.backgroundColor = options.backgroundColor ?? '#ffffff';
   element.style.overflow = 'hidden';
 
-  // Set default font styles (matches Word default: 11pt Calibri).
-  // Individual runs will override these with their own font settings.
-  // Use the resolver so the inherited fallback chain matches the one used by
-  // canvas-based text measurement (measureContainer.ts → resolveFontFamily).
-  // Otherwise measurement and rendering can pick different fallbacks (e.g.
-  // Carlito vs Arial) and lines computed to fit will overflow visually
-  // because Arial advance widths are wider than Carlito's. (#334)
+  // Page-level default (11pt Calibri). Must use the same chain as canvas
+  // measurement in measureContainer.ts, otherwise unbreakable runs that lack
+  // an explicit fontFamily can overflow the page margin (#334).
   element.style.fontFamily = resolveFontFamily('Calibri').cssFallback;
   // Use pixels to match Canvas-based measurements (11pt = 11 * 96/72 ≈ 14.67px)
   element.style.fontSize = `${(11 * 96) / 72}px`;
@@ -686,8 +682,9 @@ function renderHeaderFooterContent(
   for (let i = 0; i < content.blocks.length; i++) {
     const block = content.blocks[i];
     const measure = content.measures[i];
+    if (!block || !measure) continue;
 
-    if (block?.kind === 'paragraph' && measure?.kind === 'paragraph') {
+    if (block.kind === 'paragraph' && measure.kind === 'paragraph') {
       const paragraphBlock = block as ParagraphBlock;
       const paragraphMeasure = measure as ParagraphMeasure;
 
@@ -760,12 +757,40 @@ function renderHeaderFooterContent(
         { document: doc }
       );
 
-      // Position the fragment
-      fragEl.style.position = 'relative';
-      fragEl.style.marginBottom = '0';
+      // Position absolutely within the HF container using cursorY. This
+      // matches how the body positions fragments so the rendered placement
+      // tracks `paragraphMeasure.totalHeight` (which includes spaceBefore/
+      // spaceAfter from spacing). See #379 for the proper render-context fix.
+      fragEl.style.position = 'absolute';
+      fragEl.style.top = `${cursorY}px`;
+      fragEl.style.left = '0';
+      fragEl.style.width = `${contentWidth}px`;
 
       containerEl.appendChild(fragEl);
       cursorY += paragraphMeasure.totalHeight;
+    } else if (block.kind === 'table' && measure.kind === 'table') {
+      // HF tables don't paginate, so the synthetic fragment covers all rows.
+      const syntheticFragment: TableFragment = {
+        kind: 'table',
+        blockId: block.id,
+        x: 0,
+        y: cursorY,
+        width: measure.totalWidth,
+        height: measure.totalHeight,
+        fromRow: 0,
+        toRow: measure.rows.length,
+        pmStart: block.pmStart,
+        pmEnd: block.pmEnd,
+      };
+      const fragEl = renderTableFragment(syntheticFragment, block, measure, context, {
+        document: doc,
+      });
+      // renderTableFragment positions itself absolutely inside the page area;
+      // we override to position absolutely inside the HF container at cursorY.
+      fragEl.style.top = `${cursorY}px`;
+      fragEl.style.left = '0';
+      containerEl.appendChild(fragEl);
+      cursorY += measure.totalHeight;
     }
   }
 

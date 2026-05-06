@@ -438,6 +438,14 @@ export function parseParagraphProperties(
     const line = parseNumericAttribute(spacing, 'w', 'line');
     if (line !== undefined) formatting.lineSpacing = line;
 
+    // See ParagraphFormatting.spacingExplicit.
+    const explicit: { before?: boolean; after?: boolean } = {};
+    if (before !== undefined) explicit.before = true;
+    if (after !== undefined) explicit.after = true;
+    if (explicit.before || explicit.after) {
+      formatting.spacingExplicit = explicit;
+    }
+
     const lineRule = getAttribute(spacing, 'w', 'lineRule');
     if (lineRule) {
       formatting.lineSpacingRule = lineRule as LineSpacingRule;
@@ -1245,6 +1253,9 @@ export function parseParagraph(
           levelNumFmts.push(parent?.numFmt ?? 'decimal');
         }
 
+        const instance = numbering.getInstance(numId);
+        const overrideForLevel = instance?.levelOverrides?.find((o) => o.ilvl === ilvl);
+
         paragraph.listRendering = {
           level: ilvl,
           numId,
@@ -1257,6 +1268,8 @@ export function parseParagraph(
           // w:sz is in half-points; convert to points for downstream use
           markerFontSize: level.rPr?.fontSize ? level.rPr.fontSize / 2 : undefined,
           levelNumFmts,
+          abstractNumId: instance?.abstractNumId,
+          startOverride: overrideForLevel?.startOverride,
         };
 
         // Apply level's paragraph properties (indentation) as defaults.

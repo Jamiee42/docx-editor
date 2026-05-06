@@ -56,9 +56,17 @@ export type ToFlowBlocksOptions = {
   /**
    * @internal Allocated by toFlowBlocks() and threaded through table /
    * text-box conversion so list numbering stays continuous across containers.
-   * Not for external callers.
+   * Keyed by abstractNumId when known (ECMA-376 §17.9.18: numIds sharing one
+   * abstractNum share counter state); falls back to numId.
    */
   listCounters?: Map<number, number[]>;
+  /**
+   * @internal Tracks `${numId}:${ilvl}` pairs whose startOverride has already
+   * been applied. Per ECMA-376 §17.9.27 the override fires the first time
+   * each level of a numId is encountered, so a numId with overrides on
+   * multiple ilvls fires each one independently.
+   */
+  listSeenNumIds?: Set<string>;
 };
 
 const DEFAULT_FONT = 'Calibri';
@@ -502,7 +510,8 @@ function paragraphToRuns(node: PMNode, startPos: number, _options: ToFlowBlocksO
  */
 function computeListMarker(
   pmAttrs: PMParagraphAttrs,
-  listCounters: Map<number, number[]>
+  listCounters: Map<number, number[]>,
+  seenNumIds: Set<string>
 ): string | null {
   const numPr = pmAttrs.numPr;
   if (!numPr) return null;
@@ -519,13 +528,23 @@ function computeListMarker(
   }
 
   const level = numPr.ilvl ?? 0;
-  const counters = listCounters.get(numId) ?? new Array(9).fill(0);
+  const counterKey = pmAttrs.listAbstractNumId ?? numId;
+  const counters = listCounters.get(counterKey) ?? new Array(9).fill(0);
+
+  const seenKey = `${numId}:${level}`;
+  if (!seenNumIds.has(seenKey)) {
+    seenNumIds.add(seenKey);
+    if (pmAttrs.listStartOverride != null) {
+      // Set to (start - 1) so the increment below produces `start` itself.
+      counters[level] = pmAttrs.listStartOverride - 1;
+    }
+  }
 
   counters[level] = (counters[level] ?? 0) + 1;
   for (let i = level + 1; i < counters.length; i += 1) {
     counters[i] = 0;
   }
-  listCounters.set(numId, counters);
+  listCounters.set(counterKey, counters);
 
   // Parsed lvlText template (e.g. "%1." or "%1.%2.") resolves against the
   // counter stack. Editor-created lists with no template fall back to the
@@ -545,7 +564,8 @@ function computeListMarker(
 function convertParagraphAttrs(
   pmAttrs: PMParagraphAttrs,
   theme?: Theme | null,
-  listCounters?: Map<number, number[]>
+  listCounters?: Map<number, number[]>,
+  listSeenNumIds?: Set<string>
 ): ParagraphAttrs {
   const attrs: ParagraphAttrs = {};
 
@@ -588,6 +608,9 @@ function convertParagraphAttrs(
         attrs.spacing.lineRule = 'auto';
       }
     }
+  }
+  if (pmAttrs.spacingExplicit) {
+    attrs.spacingExplicit = pmAttrs.spacingExplicit;
   }
 
   // Indentation - handle list item fallback calculation
@@ -709,7 +732,10 @@ function convertParagraphAttrs(
   // Resolve the OOXML lvlText template (e.g. "%1.") into the rendered marker
   // ("1.", "II.", "1.1.", etc.). Single source of truth — covers body, table,
   // and text-box paragraphs since they all share this attr conversion.
-  const resolvedMarker = listCounters ? computeListMarker(pmAttrs, listCounters) : null;
+  const resolvedMarker =
+    listCounters && listSeenNumIds
+      ? computeListMarker(pmAttrs, listCounters, listSeenNumIds)
+      : null;
   if (resolvedMarker != null) {
     attrs.listMarker = resolvedMarker;
   } else if (pmAttrs.listMarker) {
@@ -783,7 +809,12 @@ function convertParagraph(
 ): ParagraphBlock {
   const pmAttrs = node.attrs as PMParagraphAttrs;
   const runs = paragraphToRuns(node, startPos, options);
-  const attrs = convertParagraphAttrs(pmAttrs, options.theme, options.listCounters);
+  const attrs = convertParagraphAttrs(
+    pmAttrs,
+    options.theme,
+    options.listCounters,
+    options.listSeenNumIds
+  );
 
   return {
     kind: 'paragraph',
@@ -1146,6 +1177,9 @@ export function toFlowBlocks(doc: PMNode, options: ToFlowBlocksOptions = {}): Fl
   // so list numbering stays continuous across containers.
   if (!opts.listCounters) {
     opts.listCounters = new Map<number, number[]>();
+  }
+  if (!opts.listSeenNumIds) {
+    opts.listSeenNumIds = new Set<string>();
   }
 
   doc.forEach((node, nodeOffset) => {

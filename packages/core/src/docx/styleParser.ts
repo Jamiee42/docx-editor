@@ -48,6 +48,7 @@ import {
   type XmlElement,
 } from './xmlParser';
 import { resolveThemeFontRef } from './themeParser';
+import { mergeTextFormatting } from '../utils/textFormattingMerge';
 
 /**
  * Style map keyed by styleId
@@ -1074,32 +1075,6 @@ function parseDocDefaults(
   }
 
   return result.rPr || result.pPr ? result : undefined;
-}
-
-/**
- * Deep merge text formatting (source overrides target)
- */
-function mergeTextFormatting(
-  target: TextFormatting | undefined,
-  source: TextFormatting | undefined
-): TextFormatting | undefined {
-  if (!source) return target;
-  if (!target) return source ? { ...source } : undefined;
-
-  const result = { ...target };
-
-  // Copy all defined properties from source
-  for (const key of Object.keys(source) as (keyof TextFormatting)[]) {
-    const value = source[key];
-    if (value !== undefined) {
-      (result as any)[key] =
-        typeof value === 'object' && value !== null
-          ? { ...((result[key] as any) || {}), ...value }
-          : value;
-    }
-  }
-
-  return result;
 }
 
 /**

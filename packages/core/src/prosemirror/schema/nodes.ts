@@ -38,6 +38,8 @@ export interface ParagraphAttrs {
   spaceAfter?: number;
   lineSpacing?: number;
   lineSpacingRule?: LineSpacingRule;
+  /** See ParagraphFormatting.spacingExplicit. */
+  spacingExplicit?: import('../../types/formatting').SpacingExplicit;
 
   // Indentation (in twips)
   indentLeft?: number;
@@ -68,6 +70,10 @@ export interface ParagraphAttrs {
    * the correct format per token.
    */
   listLevelNumFmts?: NumberFormat[];
+  /** See ListRendering.abstractNumId. */
+  listAbstractNumId?: number;
+  /** See ListRendering.startOverride. */
+  listStartOverride?: number;
 
   // Style reference
   styleId?: string;

@@ -45,6 +45,7 @@ import { emuToPixels } from '../../docx/imageParser';
 import { createStyleResolver, type StyleResolver } from '../styles';
 import type { TableAttrs, TableRowAttrs, TableCellAttrs } from '../schema/nodes';
 import { resolveColorToHex } from '../../utils/colorResolver';
+import { mergeTextFormatting } from '../../utils/textFormattingMerge';
 import type { Theme } from '../../types/document';
 
 /**
@@ -283,6 +284,8 @@ function paragraphFormattingToAttrs(
     listMarkerFontFamily: paragraph.listRendering?.markerFontFamily || undefined,
     listMarkerFontSize: paragraph.listRendering?.markerFontSize || undefined,
     listLevelNumFmts: paragraph.listRendering?.levelNumFmts || undefined,
+    listAbstractNumId: paragraph.listRendering?.abstractNumId,
+    listStartOverride: paragraph.listRendering?.startOverride,
     // Store original inline formatting for lossless serialization round-trip
     _originalFormatting: formatting || undefined,
   };
@@ -299,6 +302,8 @@ function paragraphFormattingToAttrs(
     attrs.spaceAfter = formatting?.spaceAfter ?? stylePpr?.spaceAfter;
     attrs.lineSpacing = formatting?.lineSpacing ?? stylePpr?.lineSpacing;
     attrs.lineSpacingRule = formatting?.lineSpacingRule ?? stylePpr?.lineSpacingRule;
+    // Carry through only the inline-explicit flags (never style-resolved).
+    if (formatting?.spacingExplicit) attrs.spacingExplicit = formatting.spacingExplicit;
     attrs.indentLeft = formatting?.indentLeft ?? stylePpr?.indentLeft;
     attrs.indentRight = formatting?.indentRight ?? stylePpr?.indentRight;
     attrs.indentFirstLine = formatting?.indentFirstLine ?? stylePpr?.indentFirstLine;
@@ -335,6 +340,7 @@ function paragraphFormattingToAttrs(
     attrs.spaceAfter = formatting?.spaceAfter;
     attrs.lineSpacing = formatting?.lineSpacing;
     attrs.lineSpacingRule = formatting?.lineSpacingRule;
+    if (formatting?.spacingExplicit) attrs.spacingExplicit = formatting.spacingExplicit;
     attrs.indentLeft = formatting?.indentLeft;
     attrs.indentRight = formatting?.indentRight;
     attrs.indentFirstLine = formatting?.indentFirstLine;
@@ -1095,46 +1101,6 @@ function convertRun(
 }
 
 /**
- * Merge two TextFormatting objects (source overrides target)
- */
-function mergeTextFormatting(
-  target: TextFormatting | undefined,
-  source: TextFormatting | undefined
-): TextFormatting | undefined {
-  if (!source && !target) return undefined;
-  if (!source) return target;
-  if (!target) return source;
-
-  // Start with target (style formatting), then overlay source (inline formatting)
-  const result: TextFormatting = { ...target };
-
-  // Merge each property - source (inline) takes precedence
-  if (source.bold !== undefined) result.bold = source.bold;
-  if (source.italic !== undefined) result.italic = source.italic;
-  if (source.underline !== undefined) result.underline = source.underline;
-  if (source.strike !== undefined) result.strike = source.strike;
-  if (source.doubleStrike !== undefined) result.doubleStrike = source.doubleStrike;
-  if (source.color !== undefined) {
-    const hasExplicitColor =
-      source.color.rgb ||
-      source.color.themeColor ||
-      source.color.themeTint ||
-      source.color.themeShade;
-    if (!source.color.auto || hasExplicitColor) {
-      result.color = source.color;
-    }
-  }
-  if (source.highlight !== undefined) result.highlight = source.highlight;
-  if (source.fontSize !== undefined) result.fontSize = source.fontSize;
-  if (source.fontFamily !== undefined) result.fontFamily = source.fontFamily;
-  if (source.vertAlign !== undefined) result.vertAlign = source.vertAlign;
-  if (source.allCaps !== undefined) result.allCaps = source.allCaps;
-  if (source.smallCaps !== undefined) result.smallCaps = source.smallCaps;
-
-  return result;
-}
-
-/**
  * Convert RunContent to ProseMirror nodes
  */
 function convertRunContent(content: RunContent, marks: ReturnType<typeof schema.mark>[]): PMNode[] {
@@ -1768,20 +1734,24 @@ function convertTextBox(textBox: TextBox, styleResolver: StyleResolver | null): 
 
 /**
  * Convert HeaderFooter content (array of Paragraph/Table blocks) to a ProseMirror document.
- * Used for editing headers/footers in their own ProseMirror editor.
+ * Used for editing headers/footers in their own ProseMirror editor and for the
+ * unified header/footer render pipeline. `theme` must be threaded for themeColor
+ * resolution in cell shading (`<w:shd w:themeFill=...>`) — without it, themed
+ * fills in HF tables fall back to the unresolved theme key.
  */
 export function headerFooterToProseDoc(
   content: Array<Paragraph | Table>,
-  options?: ToProseDocOptions
+  options?: ToProseDocOptions & { theme?: Theme | null }
 ): PMNode {
   const nodes: PMNode[] = [];
   const styleResolver = options?.styles ? createStyleResolver(options.styles) : null;
+  const theme = options?.theme ?? null;
 
   for (const block of content) {
     if (block.type === 'paragraph') {
       nodes.push(...convertParagraphWithTextBoxes(block, styleResolver));
     } else if (block.type === 'table') {
-      nodes.push(convertTable(block, styleResolver));
+      nodes.push(convertTable(block, styleResolver, theme));
     }
   }
 
